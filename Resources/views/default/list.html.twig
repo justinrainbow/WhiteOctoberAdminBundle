@@ -63,7 +63,7 @@
                     {% for data in pagerfanta.currentPageResults %}
                         <tr>
                             {% for field in _action.fields %}
-                                <td>{{ _action.renderField(field, data) }}</td>
+                                <td>{{ _action.renderField(field, data)|raw }}</td>
                             {% endfor %}
                             {% for action in _action.getOption('data_actions') %}
                                 <td class="td_data_action">
