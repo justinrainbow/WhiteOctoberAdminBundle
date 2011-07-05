@@ -15,16 +15,22 @@ use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\ContainerAware;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use WhiteOctober\AdminBundle\Action\Action;
+use WhiteOctober\AdminBundle\Action\ActionInterface;
 use WhiteOctober\AdminBundle\Action\ActionCollection;
 use WhiteOctober\AdminBundle\Field\Field;
 use WhiteOctober\AdminBundle\Field\FieldConfigurator;
 
-abstract class Admin extends ContainerAware
+/**
+ * Action.
+ *
+ * @author Pablo Díez <pablodip@gmail.com>
+ */
+abstract class Admin extends ContainerAware implements AdminInterface
 {
-    private $name;
     private $dataClass;
-    private $routePatternPrefix;
+    private $name;
     private $routeNamePrefix;
+    private $routePatternPrefix;
     private $parametersToPropagate;
     private $baseTemplate;
 
@@ -35,15 +41,31 @@ abstract class Admin extends ContainerAware
     private $fieldGuessers;
 
     private $rawActions;
+    private $actionParsers;
     private $actions;
+    private $actionOptionsSets;
+    private $actionOptionsProcessors;
     private $actionsVars;
 
+    private $controllerPreExecutes;
+
+    /**
+     * Constructor.
+     *
+     * @throws \RuntimeException If the data class is empty.
+     */
     public function __construct()
     {
         $this->parametersToPropagate = array();
         $this->rawFields = array();
         $this->rawFieldGuessers = array();
         $this->rawActions = array();
+        $this->actionParsers = array();
+        $this->actionOptionsSets = array();
+        $this->actionOptionsProcessors = array();
+        $this->controllerPreExecutes = array();
+
+        $this->addFieldGuesser('validator');
 
         $this->preConfigure();
         $this->configure();
@@ -56,20 +78,42 @@ abstract class Admin extends ContainerAware
         if (!$this->name) {
             $this->name = $this->getDataClassName();
         }
+
+        if (null === $this->routePatternPrefix) {
+            $this->routePatternPrefix = '/'.$this->urlize(get_class($this));
+        }
+
+        if (null === $this->routeNamePrefix) {
+            $this->routeNamePrefix = $this->urlize(get_class($this), '_');
+        }
     }
 
+    /**
+     * Pre configures the admin.
+     */
     protected function preConfigure()
     {
-        $this->addFieldGuesser('validator');
     }
 
+    /**
+     * Configures the admin.
+     */
     abstract protected function configure();
 
+    /**
+     * Post configures the admin.
+     */
     protected function postConfigure()
     {
     }
 
-    public function configureFieldsByAction(Action $action, FieldConfigurator $fieldConfigurator)
+    /**
+     * Configures the fields for an action.
+     *
+     * @param ActionInterface   $action An action.
+     * @param FieldConfigurator $fieldConfigurator A FieldConfigurator instance.
+     */
+    public function configureFieldsByAction(ActionInterface $action, FieldConfigurator $fieldConfigurator)
     {
     }
 
@@ -85,6 +129,13 @@ abstract class Admin extends ContainerAware
         return $this->name;
     }
 
+    /**
+     * Sets the data class.
+     *
+     * @param string $dataClass The data class.
+     *
+     * @return AdminInterface The admin (fluent interface).
+     */
     public function setDataClass($dataClass)
     {
         $this->dataClass = $dataClass;
@@ -92,6 +143,9 @@ abstract class Admin extends ContainerAware
         return $this;
     }
 
+    /**
+     * Returns the data class.
+     */
     public function getDataClass()
     {
         return $this->dataClass;
@@ -102,22 +156,13 @@ abstract class Admin extends ContainerAware
         return substr($this->getDataClass(), strrpos($this->getDataClass(), '\\')+1);
     }
 
-    public function setRoutePatternPrefix($routePatternPrefix)
-    {
-        $this->routePatternPrefix = $routePatternPrefix;
-
-        return $this;
-    }
-
-    public function getRoutePatternPrefix()
-    {
-        if (null === $this->routePatternPrefix) {
-            $this->routePatternPrefix = '/'.$this->urlize(get_class($this));
-        }
-
-        return $this->routePatternPrefix;
-    }
-
+    /**
+     * Sets the route name prefix.
+     *
+     * @param string $routeNamePrefix The route name prefix.
+     *
+     * @return AdminInterface The admin (fluent interface).
+     */
     public function setRouteNamePrefix($routeNamePrefix)
     {
         $this->routeNamePrefix = $routeNamePrefix;
@@ -125,15 +170,47 @@ abstract class Admin extends ContainerAware
         return $this;
     }
 
+    /**
+     * Returns the route name prefix.
+     *
+     * @return string The route name prefix.
+     */
     public function getRouteNamePrefix()
     {
-        if (null === $this->routeNamePrefix) {
-            $this->routeNamePrefix = $this->urlize(get_class($this), '_');
-        }
-
         return $this->routeNamePrefix;
     }
 
+    /**
+     * Sets the route pattern prefix.
+     *
+     * @param string $routePatternPrefix The route pattern preffix.
+     *
+     * @return AdminInterface The admin (fluent interface).
+     */
+    public function setRoutePatternPrefix($routePatternPrefix)
+    {
+        $this->routePatternPrefix = $routePatternPrefix;
+
+        return $this;
+    }
+
+    /**
+     * Returns the route pattern prefix.
+     *
+     * @return string The route pattern prefix.
+     */
+    public function getRoutePatternPrefix()
+    {
+        return $this->routePatternPrefix;
+    }
+
+    /**
+     * Adds a parameter to propagate.
+     *
+     * @param string $parameter The parameter.
+     *
+     * @return AdminInterface The admin (fluent interface).
+     */
     public function addParameterToPropagate($parameter)
     {
         $this->parametersToPropagate[] = $parameter;
@@ -141,6 +218,13 @@ abstract class Admin extends ContainerAware
         return $this;
     }
 
+    /**
+     * Adds parameters to propagate.
+     *
+     * @param array $parameters The parameters.
+     *
+     * @return AdminInterface The admin (fluent interface).
+     */
     public function addParametersToPropagate(array $parameters)
     {
         foreach ($parameters as $parameter) {
@@ -150,6 +234,13 @@ abstract class Admin extends ContainerAware
         return $this;
     }
 
+    /**
+     * Sets the parameters to propagate.
+     *
+     * @param array $parameters The parameters.
+     *
+     * @return AdminInterface The admin (fluent interface).
+     */
     public function setParametersToPropagate(array $parameters)
     {
         $this->parametersToPropagate = array();
@@ -158,6 +249,11 @@ abstract class Admin extends ContainerAware
         return $this;
     }
 
+    /**
+     * Returns the parameters to propagate.
+     *
+     * @return array The parameters to propagate.
+     */
     public function getParametersToPropagate()
     {
         return $this->parametersToPropagate;
@@ -271,6 +367,18 @@ abstract class Admin extends ContainerAware
         return $this;
     }
 
+    public function addActionParser(\Closure $parser)
+    {
+        $this->actionParsers[] = $parser;
+
+        return $this;
+    }
+
+    public function getActionParsers()
+    {
+        return $this->actionParsers;
+    }
+
     public function getActions()
     {
         if (null === $this->actions) {
@@ -303,16 +411,38 @@ abstract class Admin extends ContainerAware
         return $this->actionsVars;
     }
 
-    public function getDataFieldValue($data, $fieldName)
+    public function setActionOption($actionName, $optionName, $optionValue)
     {
-        if (method_exists($data, 'get')) {
-            return $data->get($fieldName);
-        }
+        $this->actionOptionsSets[$actionName][$optionName] = $optionValue;
 
-        return $data->{'get'.Container::camelize($fieldName)}();
+        return $this;
     }
 
-    public function getAccessRouteNameSuffix()
+    public function addActionOptionProcessor($actionName, $optionName, \Closure $processor)
+    {
+        $this->actionOptionsProcessors[$actionName][$optionName][] = $processor;
+
+        return $this;
+    }
+
+    public function addControllerPreExecute(\Closure $controllerPreExecute)
+    {
+        $this->controllerPreExecutes[] = $controllerPreExecute;
+
+        return $this;
+    }
+
+    public function getControllerPreExecutes()
+    {
+        return $this->controllerPreExecutes;
+    }
+
+    public function getDataFieldValue($data, $fieldName)
+    {
+        return $data->{'get'.ucfirst($fieldName)}();
+    }
+
+    public function generateAccessUrl()
     {
         $action = null;
         foreach ($this->getActions() as $action) {
@@ -322,7 +452,7 @@ abstract class Admin extends ContainerAware
             throw new \RuntimeException(sprintf('There is no access route.'));
         }
 
-        return $action->getRouteNameSuffix();
+        return $this->generateUrl($action->getRouteNameSuffix());
     }
 
     public function generateUrl($routeNameSuffix, array $parameters = array(), $absolute = false)
@@ -330,8 +460,8 @@ abstract class Admin extends ContainerAware
         if ($this->parametersToPropagate) {
             $request = $this->container->get('request');
             foreach ($this->parametersToPropagate as $parameter) {
-                if (!isset($parameters[$parameter]) && $request->query->has($parameter)) {
-                    $parameters[$parameter] = $request->query->get($parameter);
+                if (!isset($parameters[$parameter]) && $value = $request->get($parameter)) {
+                    $parameters[$parameter] = $value;
                 }
             }
         }
@@ -381,17 +511,46 @@ abstract class Admin extends ContainerAware
             }
             $action->setAdmin($this);
             $action->setContainer($this->container);
-            foreach ($action->getDependences() as $actionFullName => $options) {
-                if (!isset($actions[$actionFullName])) {
-                    throw new \RuntimeException(sprintf('The action "%s" does not exist.', $actionFullName));
-                }
-                $actions[$actionFullName]->mergeOptions($options);
+            foreach ($action->getActionDependences() as $actionName => $options) {
+                $dependenceAction = $this->findAction($actions, $actionName);
+                $dependenceAction->mergeOptions($options);
             }
-
-            $action->configureActionsVars($this->actionsVars);
 
             $actions[$action->getFullName()] = $action;
         }
+
+        // action parsers
+        foreach ($this->actionParsers as $parser) {
+            $parser($actions);
+        }
+
+        // action options sets
+        foreach ($this->actionOptionsSets as $actionName => $options) {
+            $action = $this->findAction($actions, $actionName);
+
+            foreach ($options as $name => $value) {
+                $action->setOption($name, $value);
+            }
+        }
+
+        // action options processors
+        foreach ($this->actionOptionsProcessors as $actionName => $options) {
+            $action = $this->findAction($actions, $actionName);
+
+            foreach ($options as $name => $processors) {
+                $value = $action->getOption($name);
+                foreach ($processors as $processor) {
+                    $value = $processor($value);
+                }
+                $action->setOption($name, $value);
+            }
+        }
+
+        // action vars
+        foreach ($actions as $action) {
+            $action->configureActionsVars($this->actionsVars);
+        }
+
         $this->actions = $actions;
         $this->rawActions = null;
     }
@@ -402,7 +561,16 @@ abstract class Admin extends ContainerAware
         foreach ($inputActions as $action) {
             // in the container
             if (is_string($action)) {
-                $action = clone $this->container->get('white_october_admin.action_factory')->get($action);
+
+                // action
+                if ($this->container->get('white_october_admin.action_factory')->has($action)) {
+                    $action = clone $this->container->get('white_october_admin.action_factory')->get($action);
+                } else {
+                    // collection
+                    if ($this->container->get('white_october_admin.action_collection_factory')->has($action)) {
+                        $action = clone $this->container->get('white_october_admin.action_collection_factory')->get($action);
+                    }
+                }
             }
 
             // normal action
@@ -425,6 +593,25 @@ abstract class Admin extends ContainerAware
 
     public function createView()
     {
-        return new AdminView($this);
+        $view = new AdminView($this);
+        $view->setContainer($this->container);
+
+        return $view;
+    }
+
+    private function findAction(array $actions, $actionName)
+    {
+        // by full name
+        if (isset($actions[$actionName])) {
+            return $actions[$actionName];
+        }
+        // by name
+        foreach ($actions as $action) {
+            if ($action->getName() == $actionName) {
+                return $action;
+            }
+        }
+        // action does not exist
+        throw new \RuntimeException(sprintf('The action "%s" does not exist.', $actionName));
     }
 }

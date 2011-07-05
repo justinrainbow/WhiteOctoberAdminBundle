@@ -58,9 +58,14 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
                             FieldOptionGuess::HIGH_CONFIDENCE
                         );
                         $options[] = new FieldOptionGuess(
-                            'form_type',
+                            'formType',
                             'checkbox',
                             FieldOptionGuess::MEDIUM_CONFIDENCE
+                        );
+                        $options[] = new FieldOptionGuess(
+                            'filterType',
+                            'boolean',
+                            FieldOptionGuess::HIGH_CONFIDENCE
                         );
                         break;
                     case 'double':
@@ -73,7 +78,7 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
                             FieldOptionGuess::LOW_CONFIDENCE
                         );
                         $options[] = new FieldOptionGuess(
-                            'form_type',
+                            'formType',
                             'number',
                             FieldOptionGuess::MEDIUM_CONFIDENCE
                         );
@@ -87,7 +92,7 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
                             FieldOptionGuess::LOW_CONFIDENCE
                         );
                         $options[] = new FieldOptionGuess(
-                            'form_type',
+                            'formType',
                             'integer',
                             FieldOptionGuess::MEDIUM_CONFIDENCE
                         );
@@ -99,8 +104,13 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
                             FieldOptionGuess::LOW_CONFIDENCE
                         );
                         $options[] = new FieldOptionGuess(
-                            'form_type',
+                            'formType',
                             'text',
+                            FieldOptionGuess::LOW_CONFIDENCE
+                        );
+                        $options[] = new FieldOptionGuess(
+                            'filterType',
+                            'string',
                             FieldOptionGuess::LOW_CONFIDENCE
                         );
                         break;
@@ -111,7 +121,7 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
                             FieldOptionGuess::MEDIUM_CONFIDENCE
                         );
                         $options[] = new FieldOptionGuess(
-                            'form_type',
+                            'formType',
                             'date',
                             FieldOptionGuess::LOW_CONFIDENCE
                         );
@@ -120,19 +130,19 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
                 break;
             case 'Symfony\Component\Validator\Constraints\Choice':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
-                    'choices',
+                    'formType',
+                    'choice',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 $options[] = new FieldOptionGuess(
-                    'form_options',
-                    $constraint->choices,
+                    'formOptions',
+                    array('choices' => $constraint->choices),
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\Country':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'country',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
@@ -144,7 +154,7 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 $options[] = new FieldOptionGuess(
-                    'form_options',
+                    'formOptions',
                     'date',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
@@ -156,77 +166,77 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'datetime',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\Email':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'text',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\File':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'file',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\Image':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'file',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\Ip':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'text',
                     FieldOptionGuess::MEDIUM_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\Language':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'language',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\Locale':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'locale',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\Max':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'number',
                     FieldOptionGuess::LOW_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\MaxLength':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'text',
                     FieldOptionGuess::LOW_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\Min':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'number',
                     FieldOptionGuess::LOW_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\MinLength':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'text',
                     FieldOptionGuess::LOW_CONFIDENCE
                 );
@@ -240,14 +250,14 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'time',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\Url':
                 $options[] = new FieldOptionGuess(
-                    'form_type',
+                    'formType',
                     'url',
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
@@ -257,21 +267,21 @@ class ValidatorFieldGuesser implements FieldGuesserInterface
         switch (get_class($constraint)) {
             case 'Symfony\Component\Validator\Constraints\NotNull':
                 $options[] = new FieldOptionGuess(
-                    'form_options',
+                    'formOptions',
                     array('required' => true),
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             case 'Symfony\Component\Validator\Constraints\NotBlank':
                 $options[] = new FieldOptionGuess(
-                    'form_options',
+                    'formOptions',
                     array('required' => true),
                     FieldOptionGuess::HIGH_CONFIDENCE
                 );
                 break;
             default:
                 $options[] = new FieldOptionGuess(
-                    'form_options',
+                    'formOptions',
                     array('required' => false),
                     FieldOptionGuess::LOW_CONFIDENCE
                 );

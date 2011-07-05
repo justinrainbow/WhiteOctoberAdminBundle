@@ -15,8 +15,16 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Reference;
 
+/**
+ * Adds tagged white_october_admin.action services to the admin factory.
+ *
+ * @author Pablo Díez <pablodip@gmail.com>
+ */
 class AddActionsPass implements CompilerPassInterface
 {
+    /**
+     * {@inheritdoc}
+     */
     public function process(ContainerBuilder $container)
     {
         if (!$container->hasDefinition('white_october_admin.action_factory')) {
@@ -25,11 +33,9 @@ class AddActionsPass implements CompilerPassInterface
 
         $actions = array();
         foreach ($container->findTaggedServiceIds('white_october_admin.action') as $serviceId => $arguments) {
-            $alias = isset($arguments[0]['alias']) ? $arguments[0]['alias'] : $serviceId;
-
-            $actions[$alias] = new Reference($serviceId);
+            $actions[] = new Reference($serviceId);
         }
 
-        $container->getDefinition('white_october_admin.action_factory')->addMethodCall('add', array($actions));
+        $container->getDefinition('white_october_admin.action_factory')->addMethodCall('addActions', array($actions));
     }
 }

@@ -11,10 +11,22 @@
 
 namespace WhiteOctober\AdminBundle\Field;
 
+/**
+ * FieldConfigurator.
+ *
+ * @author Pablo Díez <pablodip@gmail.com>
+ */
 class FieldConfigurator
 {
     private $fields;
 
+    /**
+     * Constructor.
+     *
+     * @param array $fields An array of fields.
+     *
+     * @throws \InvalidArgumentException If a fields is not instance of Field.
+     */
     public function __construct(array $fields)
     {
         $this->fields = array();
@@ -26,11 +38,25 @@ class FieldConfigurator
         }
     }
 
+    /**
+     * Returns whether a field exists or not.
+     *
+     * @return Boolean Whether a field exists or not.
+     */
     public function has($name)
     {
         return isset($this->fields[$name]);
     }
 
+    /**
+     * Returns a field.
+     *
+     * @param string $name The name.
+     *
+     * @return Field The field.
+     *
+     * @throws \InvalidArgumentException If the field does not exist.
+     */
     public function get($name)
     {
         if (!$this->has($name)) {
@@ -40,11 +66,23 @@ class FieldConfigurator
         return $this->fields[$name];
     }
 
+    /**
+     * Return the fields.
+     *
+     * @return array The fields.
+     */
     public function all()
     {
         return $this->fields;
     }
 
+    /**
+     * Disables one or several fields.
+     *
+     * @param string|array $names A name or an array of names.
+     *
+     * @throws \InvalidArgumentException If any field does not exist.
+     */
     public function disable($names)
     {
         if (!is_array($names)) {
@@ -60,15 +98,26 @@ class FieldConfigurator
         }
     }
 
-    public function disableAllExcept(array $fieldNames)
+    /**
+     * Disables all fields except one or several.
+     *
+     * @param string|array $names A name or an array of names.
+     *
+     * @throws \InvalidArgumentException If any field does not exist.
+     */
+    public function disableAllExcept($names)
     {
+        if (!is_array($names)) {
+            $names = array($names);
+        }
+
         $fields = array();
-        foreach ($fieldNames as $fieldName) {
-            if (!$this->has($fieldName)) {
+        foreach ($names as $name) {
+            if (!$this->has($name)) {
                 throw new \InvalidArgumentException(sprintf('The field "%s" does not exist.', $name));
             }
 
-            $fields = $this->fields[$fieldName];
+            $fields[$name] = $this->fields[$name];
         }
 
         $this->fields = $fields;

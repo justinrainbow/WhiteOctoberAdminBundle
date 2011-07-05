@@ -12,41 +12,97 @@
 namespace WhiteOctober\AdminBundle\DataManager\Mandango\Action;
 
 use WhiteOctober\AdminBundle\DataManager\Base\Action\ListAction as BaseListAction;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\ParameterBag;
 use Pagerfanta\Adapter\MandangoAdapter;
+use Mandango\Query;
 
 class ListAction extends BaseListAction
 {
-    private $query;
-
     protected function configure()
     {
         parent::configure();
 
         $this
             ->setName('mandango.list')
+
+            ->setOption('filterQueryClosure', function (Query $query, array $filterQueryCallbacks, $action, $container) {
+                foreach ($filterQueryCallbacks as $callback) {
+                    call_user_func($callback, $query, $container);
+                }
+            })
+
+            ->setOption('createDataClosure', function (array $createDataCallbacks, $action, $container) {
+                $data = $container->get('mandango')->create($action->getDataClass());
+                foreach ($createDataCallbacks as $callback) {
+                    call_user_func($callback, $data, $container);
+                }
+
+                return $data;
+            })
+
+            ->setOption('findDataByIdClosure', function ($id, array $findDataByIdCallbacks, $action, $container) {
+                $data = $container->get('mandango')->getRepository($action->getDataClass())->findOneById($id);
+                foreach ($findDataByIdCallbacks as $callback) {
+                    if ($data) {
+                        $data = call_user_func($callback, $data, $container);
+                    }
+                }
+
+                return $data;
+            })
+
+            ->setOption('saveDataClosure', function ($data, $action, $container) {
+                $data->save();
+            })
+
+            ->setOption('deleteDataClosure', function ($data, $action, $container) {
+                $data->delete();
+            })
         ;
     }
 
-    protected function initQuery()
+    /*
+     * List
+     */
+    protected function createQuery()
     {
-        $dataClass = $this->getDataClass();
-        $this->query = $dataClass::getRepository()->createQuery();
+        return $this->container->get('mandango')->getRepository($this->getDataClass())->createQuery();
     }
 
-    protected function applyFilter($filter)
+    protected function applySimpleFilter($query, $filter)
     {
-        foreach ($this->getFilterFields() as $field) {
-            $this->query->mergeCriteria(array($field => new \MongoRegex(sprintf('/%s/', $filter))));
+        foreach ($this->getSimpleFilterFields() as $field) {
+            $query->mergeCriteria(array($field => new \MongoRegex(sprintf('/%s/', $filter))));
         }
     }
 
-    protected function applySort($sort, $order)
+    protected function applyAdvancedFilter($query, array $filters, array $data)
     {
-        $this->query->sort(array($sort => 'asc' == $order ? \MongoCollection::ASCENDING : \MongoCollection::DESCENDING));
+        foreach ($filters as $fieldName => $filter) {
+            if (isset($data[$fieldName]) && null !== $data[$fieldName]) {
+                $filter->filter($fieldName, $data[$fieldName], $query);
+            }
+        }
     }
 
-    protected function createPagerfantaAdapter()
+    protected function transformAdvancedFilterType($type)
     {
-        return new MandangoAdapter($this->query);
+        if ('boolean' == $type) {
+            return new \WhiteOctober\AdminBundle\DataManager\Mandango\Filter\BooleanFilter();
+        }
+        if ('string' == $type) {
+            return new \WhiteOctober\AdminBundle\DataManager\Mandango\Filter\StringFilter();
+        }
+    }
+
+    protected function applySort($query, $sort, $order)
+    {
+        $query->sort(array($sort => 'asc' == $order ? \MongoCollection::ASCENDING : \MongoCollection::DESCENDING));
+    }
+
+    protected function createPagerfantaAdapter($query)
+    {
+        return new MandangoAdapter($query);
     }
 }

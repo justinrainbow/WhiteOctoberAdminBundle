@@ -14,6 +14,11 @@ namespace WhiteOctober\AdminBundle\DependencyInjection;
 use Symfony\Component\Config\Definition\Builder\NodeBuilder;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 
+/**
+ * WhiteOctoberAdminExtension configuration structure.
+ *
+ * @author Pablo Díez <pablodip@gmail.com>
+ */
 class Configuration
 {
     /**
@@ -45,6 +50,7 @@ class Configuration
                             ->end()
                         ->end()
                         ->booleanNode('mandango')->end()
+                        ->booleanNode('propel')->end()
                     ->end()
                 ->end()
             ->end()
@@ -68,5 +74,3 @@ class Configuration
         ;
     }
 }
-
-

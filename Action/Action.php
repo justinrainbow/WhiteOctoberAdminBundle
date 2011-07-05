@@ -13,31 +13,44 @@ namespace WhiteOctober\AdminBundle\Action;
 
 use Symfony\Component\DependencyInjection\ContainerAware;
 use Symfony\Component\HttpFoundation\ParameterBag;
-use WhiteOctober\AdminBundle\Admin\Admin;
+use WhiteOctober\AdminBundle\Admin\AdminInterface;
 use WhiteOctober\AdminBundle\Field\FieldBag;
 use WhiteOctober\AdminBundle\Field\FieldConfigurator;
 use WhiteOctober\AdminBundle\Guesser\FieldGuessador;
 
-abstract class Action extends ContainerAware
+/**
+ * Action.
+ *
+ * @author Pablo Díez <pablodip@gmail.com>
+ */
+abstract class Action extends ContainerAware implements ActionInterface
 {
     private $admin;
-    private $options;
+
     private $name;
     private $namespace;
+
     private $routeNameSuffix;
     private $routePatternSuffix;
     private $routeDefaults;
     private $routeRequirements;
-    private $defaultTemplate;
-    private $dependences;
+
+    private $options;
+    private $actionDependences;
+
     private $fields;
 
+    /**
+     * Constructor.
+     *
+     * @param array $options An array of options (optional).
+     */
     public function __construct(array $options = array())
     {
-        $this->options = array();
         $this->routeDefaults = array();
         $this->routeRequirements = array();
-        $this->dependences = array();
+        $this->options = array();
+        $this->actionDependences = array();
 
         $this->configure();
 
@@ -47,31 +60,47 @@ abstract class Action extends ContainerAware
         if (!$this->routeNameSuffix) {
             throw new \RuntimeException('An action must have route name suffix.');
         }
-        if (!$this->routePatternSuffix) {
+        if (null === $this->routePatternSuffix) {
             throw new \RuntimeException('An action must have route name suffix.');
-        }
-
-        if ($diff = array_diff(array_keys($options), array_keys($this->options))) {
-            throw new \InvalidArgumentException(sprintf('The action "%s" does not support the following options "".', get_class($this), implode(', ', $diff)));
         }
     }
 
+    /**
+     * Configures the action.
+     *
+     * You must put in this method at least the name, route name suffix and route pattern suffix.
+     */
     abstract protected function configure();
 
     public function configureActionsVars(ParameterBag $actionVars)
     {
     }
 
-    public function setAdmin(Admin $admin)
+    /**
+     * INTERNAL. Sets the admin.
+     *
+     * @param AdminInterface $admin The admin.
+     */
+    public function setAdmin(AdminInterface $admin)
     {
         $this->admin = $admin;
     }
 
+    /**
+     * Returns the admin.
+     *
+     * @return AdminInterface The admin.
+     */
     public function getAdmin()
     {
         return $this->admin;
     }
 
+    /**
+     * Returns the data class of the admin.
+     *
+     * @return string The data class.
+     */
     public function getDataClass()
     {
         return $this->admin->getDataClass();
@@ -82,54 +111,24 @@ abstract class Action extends ContainerAware
         return $this->admin->getActionsVars();
     }
 
-    public function mergeOptions(array $options = array())
-    {
-        $this->options = array_merge_recursive($this->options, $options);
-    }
-
-    protected function setOptions(array $options)
-    {
-        $this->options = $options;
-    }
-
-    protected function addOption($name, $defaultValue)
-    {
-        $this->options[$name] = $defaultValue;
-    }
-
-    protected function addOptions(array $options)
-    {
-        foreach ($options as $name => $defaultValue) {
-            $this->addOption($name, $defaultValue);
-        }
-    }
-
-    public function getOptions()
-    {
-        return $this->options;
-    }
-
-    public function hasOption($name)
-    {
-        return array_key_exists($name, $this->options);
-    }
-
-    public function getOption($name)
-    {
-        if (!$this->hasOption($name)) {
-            throw new \InvalidArgumentException(sprintf('The option "%s" does not exist.', $name));
-        }
-
-        return $this->options[$name];
-    }
-
+    /**
+     * Sets the name.
+     *
+     * Sets the name and namespace separating them by the last dot.
+     *
+     * @param string $name The name.
+     *
+     * @return Action The action (fluent interface).
+     *
+     * @throws \InvalidArgumentException If the name is empty.
+     */
     public function setName($name)
     {
         if (false !== $pos = strrpos($name, '.')) {
             $namespace = substr($name, 0, $pos);
             $name = substr($name, $pos + 1);
         } else {
-            $namespace = $this->namespace;
+            $namespace = null;
         }
 
         if (!$name) {
@@ -142,21 +141,37 @@ abstract class Action extends ContainerAware
         return $this;
     }
 
-    public function getName()
-    {
-        return $this->name;
-    }
-
+    /**
+     * {@inheritdoc}
+     */
     public function getNamespace()
     {
         return $this->namespace;
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function getFullName()
     {
         return $this->getNamespace() ? $this->getNamespace().'.'.$this->getName() : $this->getName();
     }
 
+    /**
+     * Sets the route name suffix.
+     *
+     * @param string $routeNameSuffix The route name suffix.
+     *
+     * @return Action The action (fluent interface).
+     */
     public function setRouteNameSuffix($routeNameSuffix)
     {
         $this->routeNameSuffix = $routeNameSuffix;
@@ -164,11 +179,21 @@ abstract class Action extends ContainerAware
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getRouteNameSuffix()
     {
         return $this->routeNameSuffix;
     }
 
+    /**
+     * Sets the route pattern suffix.
+     *
+     * @param string $routePatternSuffix The route pattern suffix.
+     *
+     * @return Action The action (fluent interface).
+     */
     public function setRoutePatternSuffix($routePatternSuffix)
     {
         $this->routePatternSuffix = $routePatternSuffix;
@@ -176,11 +201,21 @@ abstract class Action extends ContainerAware
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getRoutePatternSuffix()
     {
         return $this->routePatternSuffix;
     }
 
+    /**
+     * Sets the route defaults.
+     *
+     * @param array $routeDefaults The route defaults.
+     *
+     * @return Action The action (fluent interface).
+     */
     public function setRouteDefaults(array $routeDefaults)
     {
         $this->routeDefaults = $routeDefaults;
@@ -188,11 +223,21 @@ abstract class Action extends ContainerAware
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getRouteDefaults()
     {
         return $this->routeDefaults;
     }
 
+    /**
+     * Sets the route requirements.
+     *
+     * @param array $routeRequirements The route requirements.
+     *
+     * @return Action The action (fluent interface).
+     */
     public function setRouteRequirements(array $routeRequirements)
     {
         $this->routeRequirements = $routeRequirements;
@@ -200,51 +245,155 @@ abstract class Action extends ContainerAware
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getRouteRequirements()
     {
         return $this->routeRequirements;
     }
 
+    /**
+     * Set the route (less verbose than to use all the methods).
+     *
+     * @param string $routeNameSuffix    The route name suffix.
+     * @param string $routePatternSuffix The route pattern suffix.
+     * @param array  $routeDefaults      The route defaults (optional).
+     * @param array  $routeRequirements  The route requirements (optional).
+     *
+     * @return Action The action (fluent interface).
+     */
     public function setRoute($routeNameSuffix, $routePatternSuffix, array $routeDefaults = array(), array $routeRequirements = array())
     {
-        $this->routeNameSuffix = $routeNameSuffix;
-        $this->routePatternSuffix = $routePatternSuffix;
-        $this->routeDefaults = $routeDefaults;
-        $this->routeRequirements = $routeRequirements;
+        $this->setRouteNameSuffix($routeNameSuffix);
+        $this->setRoutePatternSuffix($routePatternSuffix);
+        $this->setRouteDefaults($routeDefaults);
+        $this->setRouteRequirements($routeRequirements);
 
         return $this;
     }
 
-    public function setDefaultTemplate($defaultTemplate)
+    /**
+     * {@inheritdoc}
+     */
+    public function hasOption($name)
     {
-        $this->defaultTemplate = $defaultTemplate;
+        return array_key_exists($name, $this->options);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getOption($name)
+    {
+        if (!$this->hasOption($name)) {
+            throw new \InvalidArgumentException(sprintf('The option "%s" does not exist.', $name));
+        }
+
+        return $this->options[$name];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getOptions()
+    {
+        return $this->options;
+    }
+
+    /**
+     * Adds an option.
+     *
+     * @param string $name         The name.
+     * @param mixed  $defaultValue The default value.
+     *
+     * @return Action The action (fluent interface).
+     *
+     * @throws \LogicException If the option already exists.
+     */
+    public function addOption($name, $defaultValue)
+    {
+        if ($this->hasOption($name)) {
+            throw new \LogicException(sprintf('The option "%s" already exists.', $name));
+        }
+
+        $this->options[$name] = $defaultValue;
 
         return $this;
     }
 
-    public function getDefaultTemplate()
+    /**
+     * Adds options.
+     *
+     * @param array $options The options as an array (the name as the key and the default value as the value).
+     *
+     * @return Action The action (fluent interface).
+     */
+    public function addOptions(array $options)
     {
-        return $this->defaultTemplate;
-    }
-
-    public function getFieldGuessers()
-    {
-        return $this->admin->getFieldGuessers();
-    }
-
-    public function setDependences(array $dependences)
-    {
-        $this->dependences = $dependences;
+        foreach ($options as $name => $defaultValue) {
+            $this->addOption($name, $defaultValue);
+        }
 
         return $this;
     }
 
-    public function getDependences()
+    /**
+     * Sets an option.
+     *
+     * @param string $name  The name.
+     * @param mixed  $value The value.
+     *
+     * @return Action The action (fluent interface).
+     *
+     * @throws \InvalidArgumentException If the option does not exist.
+     */
+    public function setOption($name, $value)
     {
-        return $this->dependences;
+        if (!$this->hasOption($name)) {
+            throw new \InvalidArgumentException(sprintf('The option "%s" does not exist.', $name));
+        }
+
+        $this->options[$name] = $value;
+
+        return $this;
     }
 
+    public function mergeOptions(array $options)
+    {
+        $this->options = array_merge_recursive($this->options, $options);
+    }
 
+    /**
+     * Sets the action dependences.
+     *
+     * The action dependences are defined as an array, with the action name as key
+     * and the options merged as value.
+     *
+     * @param array $actionDependences The action dependences.
+     *
+     * @return Action The action (fluent interface).
+     */
+    public function setActionDependences(array $actionDependences)
+    {
+        $this->actionDependences = $actionDependences;
+
+        return $this;
+    }
+
+    /**
+     * Returns the action dependences.
+     *
+     * @return array The action dependences.
+     */
+    public function getActionDependences()
+    {
+        return $this->actionDependences;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function getFields()
     {
         if (null === $this->fields) {
@@ -258,10 +407,10 @@ abstract class Action extends ContainerAware
             $fields = $fieldConfigurator->all();
 
             $dataClass = $this->getDataClass();
-            $guessador = new FieldGuessador($this->getFieldGuessers());
+            $guessador = new FieldGuessador($this->admin->getFieldGuessers());
             foreach ($fields as $field) {
                 $guessOptions = $guessador->guessOptions($dataClass, $field->getName());
-                $field->appendOptions($guessOptions);
+                $field->setOptions(array_merge($guessOptions, $field->getOptions()));
             }
 
             $this->fields = new FieldBag($fields);
@@ -270,18 +419,16 @@ abstract class Action extends ContainerAware
         return $this->fields;
     }
 
-    public function getTemplate()
-    {
-        return $this->hasOption('template') ? $this->getOption('template') : $this->getDefaultTemplate();
-    }
-
-    public function getDataValue($data, $fieldName)
-    {
-        return $data->get($fieldName);
-    }
-
-    abstract public function executeController();
-
+    /**
+     * Renders a view.
+     *
+     * Adds the "_admin" and "_action" parameters with their view objects.
+     *
+     * @param string $template   The template.
+     * @param array  $parameters An array of parameters (optional).
+     *
+     * @return string The view rendered.
+     */
     public function renderView($template, array $parameters = array())
     {
         $parameters['_admin'] = $this->admin->createView();
@@ -290,6 +437,17 @@ abstract class Action extends ContainerAware
         return $this->container->get('templating')->render($template, $parameters);
     }
 
+    /**
+     * Renders a view a returns a response.
+     *
+     * Adds the "_admin" and "_action" parameters with their view objects.
+     *
+     * @param string   $template   The template.
+     * @param array    $parameters An array of parameters (optional).
+     * @param Response $response   The response (optional).
+     *
+     * @return Response The response.
+     */
     public function render($template, array $parameters = array(), $response = null)
     {
         $parameters['_admin'] = $this->admin->createView();
@@ -298,20 +456,37 @@ abstract class Action extends ContainerAware
         return $this->container->get('templating')->renderResponse($template, $parameters, $response);
     }
 
-    public function generateUrl($routeNameSuffix, array $parameters = array(), $absolute = false)
+    /**
+     * Generates an admin URL.
+     *
+     * @param string  $routeNameSuffix The route name suffix.
+     * @param array   $parameters      An array of parameters (optional).
+     * @param Boolean $absolute        Whether to generate the URL absolute.
+     *
+     * @return string The URL.
+     */
+    public function generateAdminUrl($routeNameSuffix, array $parameters = array(), $absolute = false)
     {
         return $this->admin->generateUrl($routeNameSuffix, $parameters, $absolute);
     }
 
-    protected function buildFormFromFields()
+    /**
+     * Creates a form from a field bag.
+     *
+     * @param FieldBag $fields A field bag.
+     *
+     * @return Form A form.
+     */
+    protected function createFormFromFields(FieldBag $fields)
     {
         $formFactory = $this->container->get('form.factory');
         $formBuilder = $formFactory->createBuilder('form', null, array(
             'data_class' => $this->getDataClass(),
         ));
-        foreach ($this->getFields() as $field) {
-            $type = $field->hasOption('form_type') ? $field->getOption('form_type') : null;
-            $options = $field->hasOption('form_options') ? $field->getOption('form_options') : array();
+        foreach ($fields as $field) {
+            $type = $field->hasOption('formType') ? $field->getOption('formType') : null;
+            $options = $field->hasOption('formOptions') ? $field->getOption('formOptions') : array();
+            $options['label'] = $field->getLabel();
             $formBuilder->add($field->getName(), $type, $options);
         }
         $form = $formBuilder->getForm();
@@ -319,18 +494,35 @@ abstract class Action extends ContainerAware
         return $form;
     }
 
-    public function createView()
-    {
-        return new ActionView($this);
-    }
-
+    /**
+     * Returns whether a container service exists.
+     *
+     * @return Boolean Whether a container service exists.
+     */
     public function has($id)
     {
         return $this->container->has($id);
     }
 
+    /**
+     * Returns a container service.
+     *
+     * @param string $id The service id.
+     *
+     * @return mixed The container service.
+     */
     public function get($id)
     {
         return $this->container->get($id);
+    }
+
+    /**
+     * Returns an action view instance with the action.
+     *
+     * @return ActionView An action view instance with the action.
+     */
+    public function createView()
+    {
+        return new ActionView($this);
     }
 }

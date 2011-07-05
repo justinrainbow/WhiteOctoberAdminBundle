@@ -11,7 +11,10 @@
 
 namespace WhiteOctober\AdminBundle\Admin;
 
-class AdminView
+use Symfony\Component\DependencyInjection\ContainerAware;
+use WhiteOctober\AdminBundle\Field\Field;
+
+class AdminView extends ContainerAware
 {
     private $admin;
 
@@ -53,5 +56,36 @@ class AdminView
     public function getParametersToPropagate()
     {
         return $this->admin->getParametersToPropagate();
+    }
+
+    public function generateDataAction($data, $routeName, array $routeParameters = array())
+    {
+        foreach ($routeParameters as $parameter => &$value) {
+            if ('@' == $value[0]) {
+                $value = $this->admin->getDataFieldValue($data, substr($value, 1));
+            }
+        }
+
+        if ('@' == $routeName[0]) {
+            return $this->admin->generateUrl(substr($routeName, 1), $routeParameters);
+        }
+
+        return $this->container->get('router')->generate($routeName, $routeParameters);
+    }
+
+    public function getDataFieldValue($data, $fieldName)
+    {
+        return $this->admin->getDataFieldValue($data, $fieldName);
+    }
+
+    public function renderField(Field $field, $data)
+    {
+        $value = $this->getDataFieldValue($data, $field->getName());
+
+        if ($field->hasOption('template')) {
+            return $this->container->get('templating')->render($field->getOption('template'), array('_field' => $field, 'value' => $value));
+        }
+
+        return $value;
     }
 }

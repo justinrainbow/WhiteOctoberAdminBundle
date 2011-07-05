@@ -19,6 +19,11 @@ use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
+/**
+ * WhiteOctoberAdminExtension.
+ *
+ * @author Pablo Díez <pablodip@gmail.com>
+ */
 class WhiteOctoberAdminExtension extends Extension
 {
     /**
@@ -45,6 +50,9 @@ class WhiteOctoberAdminExtension extends Extension
         }
         if (!empty($config['data_managers']['doctrine']['odm'])) {
             $loader->load('data_manager_doctrine_odm.xml');
+        }
+        if (!empty($config['data_managers']['propel'])) {
+            $loader->load('data_manager_propel.xml');
         }
 
         // admins
